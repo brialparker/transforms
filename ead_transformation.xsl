@@ -26,27 +26,27 @@
     <xsl:template match="physloc"/>
 
     <!--creates an archivesspace component_id for series and subseries using the enumeration in the id attribute) -->
-    <!-- <xsl:template match="c01[@level='series']/did/unittitle">
+     <xsl:template match="c01[@level='series']/did/unittitle">
      <xsl:copy>
         <xsl:apply-templates select="@*|node()"/> 
      </xsl:copy> 
          <unitid>
             <xsl:value-of select="translate(ancestor::c01/@id, 'series', '')"/>
          </unitid>   
-  </xsl:template> -->
+  </xsl:template> 
 
-    <!--   <xsl:template match="c02[@level='subseries']/did/unittitle">
+       <xsl:template match="c02[@level='subseries']/did/unittitle">
         <xsl:copy>
             <xsl:apply-templates select="@*|node()"/> 
         </xsl:copy> 
         <unitid>
             <xsl:value-of select="translate(ancestor::c02/@id, 'subseries', '')"/>
         </unitid>   
-    </xsl:template>  -->
-
+    </xsl:template>  
+    
     <!--adds label attribute to the box container that generates a dummy barcode, along with instance type. -->
     <!-- Our container ids already match across the same box, so combining with dsc id creates a unique id for each box -->
-    <!-- <xsl:template match="container[@type='box'][not(.='')]">
+    <xsl:template match="container[@type='box'][not(.='')]">
         <xsl:choose>
             <xsl:when test="not(@label)">
         <xsl:copy>
@@ -57,7 +57,7 @@
         </xsl:copy>
             </xsl:when>
         </xsl:choose> 
-     </xsl:template> -->
+     </xsl:template> 
 
     <!-- This is only needed in special cases where multiple instances are described, but the second instance is not in a container element, but instead noted in physDesc. -->
     <!-- This pulls out the reel/frame data, parses it, and creates new instances for the object, including instance type, reel/frame number, component_unique_id, and dummy barcode -->
@@ -163,13 +163,13 @@
     </xsl:template>
 
     <!-- pulls in title subelement with unittitle element for required dao title attribute -->
-    <!-- <xsl:template match="did/dao">
+   <xsl:template match="did/dao">
         <xsl:copy>
             <xsl:attribute name="title">
                  <xsl:copy-of select="preceding-sibling::unittitle"/>
             </xsl:attribute>
             <xsl:apply-templates select="@*|node()"/>
         </xsl:copy>
-    </xsl:template> -->
+    </xsl:template> 
 
 </xsl:stylesheet>
