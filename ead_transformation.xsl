@@ -11,22 +11,25 @@
     </xsl:template>
 
     <!-- gets rid of many elements with empty or null values -->
-    <xsl:template match="scopecontent[contains(text(), 'null')]"/>
-    <xsl:template
-        match="unittitle[text() = 'null'] | unitdate[text() = 'null'] | item[text() = 'null'] | extent[text() = 'null']"/>
-    <xsl:template match="processinfo[contains(text(), 'null')]"/>
+    <!--<xsl:template match="scopecontent/p[(text() = 'null')]"/> -->
+    <xsl:template match="unittitle[text() = 'null'] | unitdate[text() = 'null'] | item[text() = 'null'] | extent[text() = 'null']"/>
+    <xsl:template match="processinfo[descendant::text() = 'null']"/>
     <xsl:template match="userestrict[descendant::text() = 'null']"/>
     <xsl:template match="acqinfo[descendant::text() = 'null']"/>
+    <xsl:template match="processinfo[not(descendant::p[not(*)][normalize-space()])]"/>
+  <!--  <xsl:template match="scopecontent[not(descendant::p[not(*)][normalize-space()])]"/> -->
+    <xsl:template match="bioghist[not(descendant::p[not(*)][normalize-space()])]"/>
+    <xsl:template match="arrangement/list[not(descendant::item[not(*)][normalize-space()])]"/>
 
-    <xsl:template match="list/item/*[not(node())]"/>
-    <xsl:template
-        match="list/*[not(node())] | abstract/*[not(node())] | unitdate/*[not(node())] | date/*[not(node())] | physdesc/*[not(node())]"/>
+    <xsl:template match="item[not(node())] | abstract/*[not(node())] | unitdate/*[not(node())] | date/*[not(node())] | physdesc/*[not(node())]"/>
     <xsl:template match="physdesc/extent/*[not(node())]"/>
-    <xsl:template match="scopecontent/p/*[not(node())]"/>
-    <xsl:template match="physloc"/>
+    <xsl:template match="physloc[normalize-space()]"/>
+  
+   
 
     <!--creates an archivesspace component_id for series and subseries using the enumeration in the id attribute) -->
-     <xsl:template match="c01[@level='series']/did/unittitle">
+
+    <xsl:template match="c01[@level='series']/did/unittitle">
      <xsl:copy>
         <xsl:apply-templates select="@*|node()"/> 
      </xsl:copy> 
@@ -35,18 +38,58 @@
          </unitid>   
   </xsl:template> 
 
-       <xsl:template match="c02[@level='subseries']/did/unittitle">
+     <xsl:template match="c02[@level='subseries']/did/unittitle">
         <xsl:copy>
             <xsl:apply-templates select="@*|node()"/> 
         </xsl:copy> 
         <unitid>
             <xsl:value-of select="translate(ancestor::c02/@id, 'subseries', '')"/>
         </unitid>   
-    </xsl:template>  
+    </xsl:template> 
     
+  <xsl:template match="*[@level='file']/did/container[@type='box']">
+      <xsl:variable name="folder" select="replace(following-sibling::container[@type='folder'], '(\d{1,}).(\d{1,})', '$1')"/>
+      <xsl:variable name="series" select="translate(ancestor::c01/@id, 'series', '')"/>
+      <xsl:choose>
+          <xsl:when test="not(@label)">
+              <xsl:copy>
+                  <xsl:attribute name="label">
+                      <xsl:copy-of select="concat('mixed_materials ', '(', ancestor::dsc/@id, self::container/@id, ')')"/>
+                  </xsl:attribute>
+                  <xsl:apply-templates select="@*|node()"/>
+              </xsl:copy>
+          </xsl:when>
+      </xsl:choose> 
+        <unitid>
+            <xsl:value-of select="concat($series, '.', self::container[@type='box'], '.', $folder)"/>
+            
+        </unitid>   
+    </xsl:template> 
+    
+    <xsl:template match="*[@level='item']/did/container[@type='box']">
+        <xsl:variable name="folder" select="replace(ancestor::*[@level='file']/did/container[@type='folder'], '(\d{1,}).(\d{1,})', '$1')"/>
+        <xsl:variable name="series" select="translate(ancestor::c01/@id, 'series', '')"/>
+        <xsl:choose>
+            <xsl:when test="not(@label)">
+                <xsl:copy>
+                    <xsl:attribute name="label">
+                        <xsl:copy-of select="concat('mixed_materials ', '(', ancestor::dsc/@id, self::container/@id, ')')"/>
+                    </xsl:attribute>
+                    <xsl:apply-templates select="@*|node()"/>
+                </xsl:copy>
+            </xsl:when>
+        </xsl:choose> 
+      <!--  <xsl:copy>
+            <xsl:apply-templates select="@*|node()"/> 
+        </xsl:copy> -->
+        <unitid>
+            <xsl:value-of select="concat($series, '.', self::container[@type='box'], '.', $folder, '.', following-sibling::container[@type='item'])"/>
+        </unitid>   
+    </xsl:template> 
+
     <!--adds label attribute to the box container that generates a dummy barcode, along with instance type. -->
     <!-- Our container ids already match across the same box, so combining with dsc id creates a unique id for each box -->
-    <xsl:template match="container[@type='box'][not(.='')]">
+   <!--  <xsl:template match="container[@type='box'][not(.='')]">
         <xsl:choose>
             <xsl:when test="not(@label)">
         <xsl:copy>
@@ -57,11 +100,11 @@
         </xsl:copy>
             </xsl:when>
         </xsl:choose> 
-     </xsl:template> 
+     </xsl:template> -->
 
     <!-- This is only needed in special cases where multiple instances are described, but the second instance is not in a container element, but instead noted in physDesc. -->
     <!-- This pulls out the reel/frame data, parses it, and creates new instances for the object, including instance type, reel/frame number, component_unique_id, and dummy barcode -->
-    <xsl:template match="c02">
+   <!-- <xsl:template match="c02">
         <xsl:choose>
             <xsl:when test="contains(did/physdesc, 'Reel')">
                 <xsl:for-each select="did">
@@ -74,18 +117,14 @@
 
                     <c02 level="file">
                         <xsl:copy>
-                            <unitid>
-                                <xsl:value-of select="$id"/>
-                            </unitid>
+                            
                             <xsl:apply-templates select="@* | node()"/>
                             <container type="reel">
                                 <xsl:attribute name="id">
                                     <xsl:value-of select="$id"/>
                                 </xsl:attribute>
                                 <xsl:attribute name="label">
-                                    <xsl:value-of
-                                        select="concat('Mixed materials ', '(', 'TESTING_reel', $reel, ')')"
-                                    />
+                                    <xsl:value-of select="concat('Mixed materials ', '(', ancestor::dsc/@id, '_reel', $reel,')')"/>
                                 </xsl:attribute>
                                 <xsl:value-of select="$reel"/>
                             </container>
@@ -107,9 +146,9 @@
                 </xsl:copy>
             </xsl:otherwise>
         </xsl:choose>
-    </xsl:template>
+    </xsl:template> -->
 
-    <xsl:template match="c03[@level = 'file']">
+    <xsl:template match="*[@level = 'file']">
         <xsl:choose>
             <xsl:when test="contains(did/physdesc, 'Reel')">
                 <xsl:for-each select="did">
@@ -118,12 +157,10 @@
                     <xsl:variable name="reel"
                         select="replace(physdesc, 'Reel (\d{1,}), Frame (\d{1,}).*', '$1')"/>
                     <xsl:variable name="frame"
-                        select="replace(physdesc, 'Reel (\d{1,}), Frame (\d{1,}).*', '$2')"/>
+                        select="replace(physdesc, 'Reel (\d{1,}), Frame (\d{1,}\-\d{1,}).*', '$2')"/>
                     <c03 level="file">
                         <xsl:copy>
-                            <unitid>
-                                <xsl:value-of select="$id"/>
-                            </unitid>
+                            
                             <xsl:apply-templates select="@* | node()"/>
                             <container type="reel">
                                 <xsl:attribute name="id">
@@ -131,7 +168,7 @@
                                 </xsl:attribute>
                                 <xsl:attribute name="label">
                                     <xsl:value-of
-                                        select="concat('Mixed materials ', '(', 'TESTING_reel', $reel, ')')"
+                                        select="concat('Microform ', '(', ancestor::dsc/@id, '_reel', $reel, ')')"
                                     />
                                 </xsl:attribute>
                                 <xsl:value-of select="$reel"/>
@@ -163,13 +200,13 @@
     </xsl:template>
 
     <!-- pulls in title subelement with unittitle element for required dao title attribute -->
-   <xsl:template match="did/dao">
+    <xsl:template match="did/dao">
         <xsl:copy>
             <xsl:attribute name="title">
                  <xsl:copy-of select="preceding-sibling::unittitle"/>
             </xsl:attribute>
             <xsl:apply-templates select="@*|node()"/>
         </xsl:copy>
-    </xsl:template> 
+    </xsl:template>
 
 </xsl:stylesheet>
